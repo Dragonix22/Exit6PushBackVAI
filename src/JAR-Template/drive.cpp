@@ -271,7 +271,7 @@ void Drive::turn_to_angle(float angle, float turn_max_voltage, float turn_settle
     float output = turnPID.compute(error);
     output = clamp(output, -turn_max_voltage, turn_max_voltage);
     drive_with_voltage(output, -output);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -319,7 +319,7 @@ void Drive::drive_distance(float distance, float heading, float drive_max_voltag
     heading_output = clamp(heading_output, -heading_max_voltage, heading_max_voltage);
 
     drive_with_voltage(drive_output+heading_output, drive_output-heading_output);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -343,7 +343,7 @@ void Drive::left_swing_to_angle(float angle, float swing_max_voltage, float swin
     output = clamp(output, -turn_max_voltage, turn_max_voltage);
     DriveL.spin(fwd, output, volt);
     DriveR.stop(hold);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -359,7 +359,7 @@ void Drive::right_swing_to_angle(float angle, float swing_max_voltage, float swi
     output = clamp(output, -turn_max_voltage, turn_max_voltage);
     DriveR.spin(reverse, output, volt);
     DriveL.stop(hold);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -403,7 +403,7 @@ float Drive::get_SidewaysTracker_position(){
 void Drive::position_track(){
   while(1){
     odom.update_position(get_ForwardTracker_position(), get_SidewaysTracker_position(), get_absolute_heading());
-    task::sleep(5);
+    wait(5,msec);
   }
 }
 
@@ -508,7 +508,7 @@ void Drive::drive_to_point(float X_position, float Y_position, float drive_min_v
     drive_output = clamp_min_voltage(drive_output, drive_min_voltage);
 
     drive_with_voltage(left_voltage_scaling(drive_output, heading_output), right_voltage_scaling(drive_output, heading_output));
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -593,7 +593,7 @@ void Drive::drive_to_pose(float X_position, float Y_position, float angle, float
     drive_output = clamp_min_voltage(drive_output, drive_min_voltage);
 
     drive_with_voltage(left_voltage_scaling(drive_output, heading_output), right_voltage_scaling(drive_output, heading_output));
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -628,7 +628,7 @@ void Drive::turn_to_point(float X_position, float Y_position, float extra_angle_
     float output = turnPID.compute(error);
     output = clamp(output, -turn_max_voltage, turn_max_voltage);
     drive_with_voltage(output, -output);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 
@@ -679,7 +679,7 @@ void Drive::holonomic_drive_to_pose(float X_position, float Y_position, float an
     DriveLB.spin(fwd, drive_output*cos(-to_rad(get_absolute_heading()) - heading_error + 3*M_PI/4) + turn_output, volt);
     DriveRB.spin(fwd, drive_output*cos(to_rad(get_absolute_heading()) + heading_error - M_PI/4) - turn_output, volt);
     DriveRF.spin(fwd, drive_output*cos(-to_rad(get_absolute_heading()) - heading_error + 3*M_PI/4) - turn_output, volt);
-    task::sleep(10);
+ wait(10,msec);
   }
 }
 

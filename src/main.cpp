@@ -38,16 +38,15 @@ Drive chassis(
 //HOLONOMIC_TWO_ROTATION
 //
 //Write it here:
-ZERO_TRACKER_NO_ODOM,
+ZERO_TRACKER_ODOM,
 
 //Add the names of your Drive motors into the motor groups below, separated by commas, i.e. motor_group(Motor1,Motor2,Motor3).
 //You will input whatever motor names you chose when you configured your robot using the sidebar configurer, they don't have to be "Motor1" and "Motor2".
 
-//Left Motors:
-motor_group(),
+motor_group(leftFrontMotor, leftBackTopMotor, leftBackBottomMotor),
 
 //Right Motors:
-motor_group(),
+motor_group(rightFrontMotor, rightBackTopMotor, rightBackBottomMotor),
 
 //Specify the PORT NUMBER of your inertial sensor, in PORT format (i.e. "PORT1", not simply "1"):
 PORT1,
@@ -130,7 +129,7 @@ void pre_auton() {
     Brain.Screen.printAt(5, 120, "Selected Auton:");
     switch(current_auton_selection){
       case 0:
-        Brain.Screen.printAt(5, 140, "Auton 1");
+        Brain.Screen.printAt(5, 140, "Auton One");
         break;
       case 1:
         Brain.Screen.printAt(5, 140, "Auton 2");
@@ -160,7 +159,7 @@ void pre_auton() {
     } else if (current_auton_selection == 8){
       current_auton_selection = 0;
     }
-    task::sleep(10);
+    wait(10,msec);
   }
 }
 
@@ -175,7 +174,7 @@ void autonomous(void) {
   auto_started = true;
   switch(current_auton_selection){ 
     case 0:
-      drive_test();
+      autonOne();
       break;
     case 1:         
       drive_test();
