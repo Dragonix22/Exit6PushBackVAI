@@ -1,4 +1,5 @@
 #include "vex.h"
+#include <stdarg.h>
 
 using namespace vex;
 
@@ -272,18 +273,35 @@ void emergency_stop() {
 }
 
 /*-------------------------------- screen -----------------------------------*/
+void screen_print(int x, int y, const char *fmt, ...) {
+  char raw[96], safe[192];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(raw, sizeof(raw), fmt, args);
+  va_end(args);
+  // printAt treats its text as a format string, so double any '%'.
+  int j = 0;
+  for (int i = 0; raw[i] != 0 && j < (int)sizeof(safe) - 2; i++) {
+    if (raw[i] == '%') safe[j++] = '%';
+    safe[j++] = raw[i];
+  }
+  safe[j] = 0;
+  // Exactly three arguments, so only printAt(x, y, format, ...) can match.
+  Brain.Screen.printAt(x, y, safe);
+}
+
 void draw_status(int y) {
   Pose p = pose.get();
-  Brain.Screen.printAt(5, y, "Jetson %s  pkts %ld  det %ld   ", jetson_ok() ? "OK" : "--",
-                       (long)jetson_comms.get_packets(), (long)s_rec.detectionCount);
-  Brain.Screen.printAt(5, y + 20, "Link %s  partner %s   ", team_link.linked() ? "UP" : "down",
-                       world.partner.valid ? "seen" : "--");
-  Brain.Screen.printAt(5, y + 40, "GPS q%d  err %.1fin  %s   ", pose.gps_quality(),
-                       pose.gps_error_in(), pose.seeded() ? "seeded" : "NOT SEEDED");
-  Brain.Screen.printAt(5, y + 60, "Pose %.1f, %.1f, %.0f  side %s   ", p.x, p.y, p.heading,
-                       side_of(p.x, p.y) == RED ? "RED" : "BLUE");
-  Brain.Screen.printAt(5, y + 80, "Task %s  objs %d  %s   ", task_name(s_task),
-                       world.count_pickable(), log::enabled() ? log::file_name() : "no SD");
+  screen_print(5, y, "Jetson %s  pkts %ld  det %ld   ", jetson_ok() ? "OK" : "--",
+               (long)jetson_comms.get_packets(), (long)s_rec.detectionCount);
+  screen_print(5, y + 20, "Link %s  partner %s   ", team_link.linked() ? "UP" : "down",
+               world.partner.valid ? "seen" : "--");
+  screen_print(5, y + 40, "GPS q%d  err %.1fin  %s   ", pose.gps_quality(),
+               pose.gps_error_in(), pose.seeded() ? "seeded" : "NOT SEEDED");
+  screen_print(5, y + 60, "Pose %.1f, %.1f, %.0f  side %s   ", p.x, p.y, p.heading,
+               side_of(p.x, p.y) == RED ? "RED" : "BLUE");
+  screen_print(5, y + 80, "Task %s  objs %d  %s   ", task_name(s_task),
+               world.count_pickable(), log::enabled() ? log::file_name() : "no SD");
 }
 
 }  // namespace ai

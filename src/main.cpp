@@ -167,16 +167,18 @@ void pre_auton() {
 
   while(!auto_started){
     Brain.Screen.clearScreen();
-    Brain.Screen.printAt(5, 20, "Exit6 VAI  %s robot  battery %d%%",
-                         ROBOT_ID == ROBOT_BIG ? "24in" : "18in", Brain.Battery.capacity());
-    Brain.Screen.printAt(5, 40, "ISO: %s", routines[current_auton_selection].name);
-    Brain.Screen.printAt(5, 60, "Alliance: %s", alliance_mode_name());
+    // ai::screen_print, not Brain.Screen.printAt, for text with strings in it
+    // (see the note in include/ai/ai_main.h).
+    ai::screen_print(5, 20, "Exit6 VAI  %s robot  battery %d%%",
+                     ROBOT_ID == ROBOT_BIG ? "24in" : "18in", (int)Brain.Battery.capacity());
+    ai::screen_print(5, 40, "ISO: %s", routines[current_auton_selection].name);
+    ai::screen_print(5, 60, "Alliance: %s", alliance_mode_name());
     ai::draw_status(90);
 
     bool comp = connected_to_competition();
     if (!comp) {
       Brain.Screen.drawRectangle(300, 195, 175, 40);
-      Brain.Screen.printAt(310, 222, ai::test_match_running() ? "RUNNING (B=stop)" : "TEST MATCH");
+      ai::screen_print(310, 222, "%s", ai::test_match_running() ? "RUNNING (B=stop)" : "TEST MATCH");
     }
 
     if (Brain.Screen.pressing()) {

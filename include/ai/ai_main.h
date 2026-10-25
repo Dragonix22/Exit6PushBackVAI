@@ -47,4 +47,10 @@ void emergency_stop();
 // Brain screen status block, drawn from main.cpp's pre_auton loop.
 void draw_status(int y);
 
+// printf-style text on the Brain screen. Use this instead of
+// Brain.Screen.printAt when an argument is a string: the SDK also has
+// printAt(x, y, bool opaque, format, ...), and a string literal converts to
+// bool, so printAt(x, y, "%s", text) is ambiguous and won't compile.
+void screen_print(int x, int y, const char *fmt, ...);
+
 }  // namespace ai
