@@ -91,6 +91,9 @@ PORT3,     -PORT4,
 //Input Forward Tracker center distance (a positive distance corresponds to a tracker on the right side of the robot, negative is left.)
 //For a zero tracker tank drive with odom, put the positive distance from the center of the robot to the right side of the drive.
 //This distance is in inches:
+//TODO (Exit6): with ZERO_TRACKER_ODOM the "tracker" is the right drive side, so this should be
+//POSITIVE and about half the track width (center of robot to center of the right wheels).
+//-2 makes odom drift during turns. Measure and fix, then re-run odom_test.
 -2,
 
 //Input the Sideways Tracker Port, following the same steps as the Forward Tracker Port:
@@ -104,128 +107,138 @@ PORT3,     -PORT4,
 
 );
 
-int current_auton_selection = 0;
+/*---------------------------------------------------------------------------*/
+/*                       Isolation routine selector                          */
+/*                                                                           */
+/*  In VEX AI the first autonomous period is the 15 s Isolation Period. The  */
+/*  routine picked here runs then; the Interaction Period is always the AI.  */
+/*  The JAR test routines are kept so you can still tune the drive.          */
+/*---------------------------------------------------------------------------*/
+
+struct RoutineEntry {
+  const char *name;
+  void (*fn)(void);
+};
+
+static RoutineEntry routines[] = {
+  {"ISO: score preload", iso_score_preload},
+  {"ISO: midfield", iso_midfield},
+  {"ISO: do nothing", 0},
+  {"JAR: autonOne", autonOne},
+  {"JAR: drive_test", drive_test},
+  {"JAR: turn_test", turn_test},
+  {"JAR: swing_test", swing_test},
+  {"JAR: full_test", full_test},
+  {"JAR: odom_test", odom_test},
+  {"JAR: tank_odom_test", tank_odom_test},
+};
+static const int NUM_ROUTINES = sizeof(routines) / sizeof(routines[0]);
+
+int current_auton_selection = (ROBOT_ID == ROBOT_BIG) ? 0 : 1;
 bool auto_started = false;
 
+static bool connected_to_competition() {
+  return Competition.isFieldControl() || Competition.isCompetitionSwitch();
+}
+
+static const char *alliance_mode_name() {
+  switch (ai::alliance_mode) {
+    case ai::ALLIANCE_FORCE_RED:  return "RED (forced)";
+    case ai::ALLIANCE_FORCE_BLUE: return "BLUE (forced)";
+    default:                      return "AUTO from GPS";
+  }
+}
+
 /**
- * Function before autonomous. It prints the current auton number on the screen
- * and tapping the screen cycles the selected auton by 1. Add anything else you
- * may need, like resetting pneumatic components. You can rename these autons to
- * be more descriptive, if you like.
+ * Runs before the match. Calibrates sensors and starts the AI background task
+ * (keep the robot still for ~3 s after starting the program), then shows a
+ * status screen:
+ *  - tap the top-left to change the Isolation routine
+ *  - tap the top-right to change how the alliance is chosen
+ *  - when NOT connected to a field, tap TEST MATCH to run a full practice
+ *    match (15 s Isolation + 1:45 Interaction); controller B stops it.
  */
 
 void pre_auton() {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   default_constants();
+  ai::init();
 
   while(!auto_started){
     Brain.Screen.clearScreen();
-    Brain.Screen.printAt(5, 20, "JAR Template v1.2.0");
-    Brain.Screen.printAt(5, 40, "Battery Percentage:");
-    Brain.Screen.printAt(5, 60, "%d", Brain.Battery.capacity());
-    Brain.Screen.printAt(5, 80, "Chassis Heading Reading:");
-    Brain.Screen.printAt(5, 100, "%f", chassis.get_absolute_heading());
-    Brain.Screen.printAt(5, 120, "Selected Auton:");
-    switch(current_auton_selection){
-      case 0:
-        Brain.Screen.printAt(5, 140, "Auton One");
-        break;
-      case 1:
-        Brain.Screen.printAt(5, 140, "Auton 2");
-        break;
-      case 2:
-        Brain.Screen.printAt(5, 140, "Auton 3");
-        break;
-      case 3:
-        Brain.Screen.printAt(5, 140, "Auton 4");
-        break;
-      case 4:
-        Brain.Screen.printAt(5, 140, "Auton 5");
-        break;
-      case 5:
-        Brain.Screen.printAt(5, 140, "Auton 6");
-        break;
-      case 6:
-        Brain.Screen.printAt(5, 140, "Auton 7");
-        break;
-      case 7:
-        Brain.Screen.printAt(5, 140, "Auton 8");
-        break;
+    Brain.Screen.printAt(5, 20, "Exit6 VAI  %s robot  battery %d%%",
+                         ROBOT_ID == ROBOT_BIG ? "24in" : "18in", Brain.Battery.capacity());
+    Brain.Screen.printAt(5, 40, "ISO: %s", routines[current_auton_selection].name);
+    Brain.Screen.printAt(5, 60, "Alliance: %s", alliance_mode_name());
+    ai::draw_status(90);
+
+    bool comp = connected_to_competition();
+    if (!comp) {
+      Brain.Screen.drawRectangle(300, 195, 175, 40);
+      Brain.Screen.printAt(310, 222, ai::test_match_running() ? "RUNNING (B=stop)" : "TEST MATCH");
     }
-    if(Brain.Screen.pressing()){
-      while(Brain.Screen.pressing()) {}
-      current_auton_selection ++;
-    } else if (current_auton_selection == 8){
-      current_auton_selection = 0;
+
+    if (Brain.Screen.pressing()) {
+      int x = Brain.Screen.xPosition(), y = Brain.Screen.yPosition();
+      while (Brain.Screen.pressing()) { wait(10, msec); }
+      if (y < 75 && x < 240) {
+        current_auton_selection = (current_auton_selection + 1) % NUM_ROUTINES;
+      } else if (y < 75) {
+        ai::alliance_mode = (ai::AllianceMode)((ai::alliance_mode + 1) % 3);
+      } else if (!comp && y > 190 && x > 300 && !ai::test_match_running()) {
+        ai::start_test_match(routines[current_auton_selection].fn);
+      }
     }
-    wait(10,msec);
+    wait(100, msec);
   }
 }
 
 /**
- * Auton function, which runs the selected auton. Case 0 is the default,
- * and will run in the brain screen goes untouched during preauton. Replace
- * drive_test(), for example, with your own auton function you created in
- * autons.cpp and declared in autons.h.
+ * Autonomous callback. VEX AI field control has historically run BOTH periods
+ * as autonomous, so the first call is Isolation and the second is Interaction.
+ *
+ * The flag is cleared BEFORE running Isolation: the field kills this task when
+ * Isolation ends, so code after the routine may never run. (VEX's ai_demo sets
+ * its flag after the routine, which only works if the routine finishes early.)
+ * If a match is replayed, restart the program so the flag resets.
  */
+
+static bool first_auto = true;
 
 void autonomous(void) {
   auto_started = true;
-  switch(current_auton_selection){ 
-    case 0:
-      autonOne();
-      break;
-    case 1:         
-      drive_test();
-      break;
-    case 2:
-      turn_test();
-      break;
-    case 3:
-      swing_test();
-      break;
-    case 4:
-      full_test();
-      break;
-    case 5:
-      odom_test();
-      break;
-    case 6:
-      tank_odom_test();
-      break;
-    case 7:
-      holonomic_odom_test();
-      break;
- }
+  if (first_auto) {
+    first_auto = false;
+    ai::run_isolation(routines[current_auton_selection].fn);
+  } else {
+    ai::run_interaction();
+  }
 }
 
-/*---------------------------------------------------------------------------*/
-/*                                                                           */
-/*                              User Control Task                            */
-/*                                                                           */
-/*  This task is used to control your robot during the user control phase of */
-/*  a VEX Competition.                                                       */
-/*                                                                           */
-/*  You must modify the code to add your own robot specific commands here.   */
-/*---------------------------------------------------------------------------*/
+/**
+ * Driver-control callback. Section 7 treats the Interaction Period like the
+ * Driver Controlled Period, but robots stay autonomous and no human may drive.
+ * So when connected to a field (or competition switch) this runs the AI.
+ * Only when NOT connected (bench/practice) does the controller drive the robot.
+ */
 
 void usercontrol(void) {
-  // User control code here, inside the loop
+  if (connected_to_competition()) {
+    auto_started = true;
+    ai::run_interaction();
+    return;
+  }
+
   while (1) {
-    // This is the main execution loop for the user control program.
-    // Each time through the loop your program should update motor + servo
-    // values based on feedback from the joysticks.
-
-    // ........................................................................
-    // Insert user code here. This is where you use the joystick values to
-    // update your motors, etc.
-    // ........................................................................
-
-    //Replace this line with chassis.control_tank(); for tank drive 
-    //or chassis.control_holonomic(); for holo drive.
-    chassis.control_arcade();
-
+    if (ai::test_match_running()) {
+      // Practice safety stop. Never used under field control.
+      if (controller(primary).ButtonB.pressing()) ai::emergency_stop();
+    } else {
+      //Replace this line with chassis.control_tank(); for tank drive
+      //or chassis.control_holonomic(); for holo drive.
+      chassis.control_arcade();
+    }
     wait(20, msec); // Sleep the task for a short amount of time to
                     // prevent wasted resources.
   }

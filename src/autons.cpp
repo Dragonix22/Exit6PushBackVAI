@@ -135,3 +135,55 @@ void autonOne() {
   chassis.drive_to_point(50,50);
 
 }
+
+/*---------------------------------------------------------------------------*/
+/*                        VEX AI Isolation routines                          */
+/*                                                                           */
+/*  These run during the 15 s Isolation Period via ai::run_isolation(),      */
+/*  which has already seeded odom from the GPS (so coordinates are field     */
+/*  inches, see include/ai/field.h) and worked out our alliance.             */
+/*                                                                           */
+/*  Use ai:: moves, not chassis.* directly: they stop at the end-of-period   */
+/*  deadline and when the robot is stuck.                                    */
+/*                                                                           */
+/*  Isolation Win Point (VAISC2), all at the end of Isolation:               */
+/*   - 5+ Pin halves Scored for us, not in quadrants across the line         */
+/*   - 2+ Goals with 2+ of our halves each                                   */
+/*   - at least one robot partly in the Midfield                             */
+/*   - neither robot touching the Field Perimeter                            */
+/*---------------------------------------------------------------------------*/
+
+using namespace ai::field;
+
+/**
+ * Big robot: score the preload on our alliance goal, then (TODO) grab a known
+ * starting pin and score it on the neutral goal on our side.
+ * Template only: fill in once the scoring mechanism exists.
+ */
+
+void iso_score_preload(){
+  Alliance us = ai::alliance();
+  int our_goal = (us == RED) ? 1 : 3;       // red goal (tag 1) / blue goal (tag 3)
+  int side_neutral = (us == RED) ? 2 : 4;   // neutral goal on our side of the line
+
+  if (ai::approach(GOALS[our_goal].x, GOALS[our_goal].y, 12.0f) == ai::MOVE_DONE) {
+    if (ai::mech::place()) ai::world.note_scored(our_goal, match_load_pin(us));
+    ai::drive(-8.0f);
+  }
+
+  // TODO: pick up a starting pin from its Appendix A position, then:
+  // ai::approach(GOALS[side_neutral].x, GOALS[side_neutral].y, 12.0f);
+  (void)side_neutral;
+}
+
+/**
+ * Small robot: leave the wall and end partly inside the Midfield on our side
+ * (one of the Isolation Win Point tasks), away from the center goal.
+ */
+
+void iso_midfield(){
+  float s = (ai::alliance() == RED) ? -1.0f : 1.0f;  // red is the x + y < 0 half
+  float k = MIDFIELD_HALF_IN - 6.0f;
+  ai::turn_toward(s * k, s * k);
+  ai::go_to(s * k, s * k, 8.0f);
+}

@@ -152,4 +152,15 @@ public:
   void control_arcade();
   void control_tank();
   void control_holonomic();
+
+  // ---- Added for VEX AI (Exit6) ----
+  // Any task can set motion_abort = true to make the motion that is running
+  // right now return early. ai/motion.cpp clears it before each move.
+  volatile bool motion_abort = false;
+  // set_coordinates() used to start a new odom task on every call. Calling it
+  // again (e.g. to re-seed from GPS) now just resets the position.
+  bool odom_task_started = false;
+  // Move the odom estimate without touching the gyro or restarting odom.
+  // Used by GPS fusion (ai/pose.cpp).
+  void correct_position(float X_position, float Y_position);
 };
