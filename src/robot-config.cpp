@@ -17,7 +17,7 @@ motor leftBackBottomMotor=motor(PORT9, true);
 motor rightFrontMotor=motor(PORT20, false);
 motor rightBackTopMotor=motor(PORT18, true);
 motor rightBackBottomMotor=motor(PORT19, false);
-//Left Motors:x
+
 
 void vexcodeInit( void ) {
   // nothing to initialize

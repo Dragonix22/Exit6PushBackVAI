@@ -6,12 +6,11 @@ extern brain Brain;
 //extern motor LeftFront;
 
 //Add your devices below, and don't forget to do the same in robot-config.cpp:
-motor leftFrontMotor;
-motor leftBackTopMotor;
-motor leftBackBottomMotor;
-motor rightFrontMotor;
-motor rightBackTopMotor;
-motor rightBackBottomMotor;
+extern motor leftFrontMotor;
+extern motor leftBackBottomMotor;
+extern motor rightFrontMotor;
+extern motor leftBackTopMotor;
+extern motor rightBackTopMotor;
+extern motor rightBackBottomMotor;
 
-
-void  vexcodeInit( void );
+void vexcodeInit( void );
