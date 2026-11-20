@@ -45,7 +45,11 @@ class Planner {
 
   // Expected margin from placing one object of class cls on goal g.
   float placement_margin(int cls, int goal) const;
-  int   best_goal_for(int cls, float &margin) const;
+  int   best_goal_for(int cls, float &margin, bool allow_midfield_goal = true) const;
+
+  // SG12: false once the Midfield Goal is closed for Placing (Endgame, plus a
+  // safety margin because our clock starts a little after the field's).
+  bool  midfield_goal_open(float time_left_at_place_s) const;
 
   // Seconds needed to reach the Midfield and park, plus buffer.
   float park_time_s() const;
@@ -63,6 +67,7 @@ class Planner {
   float p_win_unknown_toggle;  // chance we own a neutral/unknown toggle at the end
   float p_keep_our_toggle;     // chance a toggle set to our color stays ours
   float p_win_midfield;        // chance we own the Midfield goal's yellow halves
+  float sg12_margin_s;         // stop Midfield Goal placing this long before Endgame
 
  private:
   float travel_s(float x, float y) const;

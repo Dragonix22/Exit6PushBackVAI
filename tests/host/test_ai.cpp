@@ -291,6 +291,37 @@ static void test_planner() {
   g_gps_q = 100;
 }
 
+static void test_sg12_endgame() {
+  using namespace ai;
+  using namespace ai::field;
+  g_gps_q = 0;
+  world.reset(RED);
+  pose.seed_manual(10, 10, 0);  // right next to the Midfield Goal
+  tick(5);
+  mech::set_held(RED_YELLOW_PIN);
+
+  // Boundary: closed for the last 10 s plus the safety margin.
+  CHECK(planner.midfield_goal_open(ENDGAME_S + planner.sg12_margin_s + 0.1f), "should be open");
+  CHECK(!planner.midfield_goal_open(ENDGAME_S + planner.sg12_margin_s - 0.1f), "should be closed");
+
+  // Mid-match, the Midfield Goal is the best place for a red/yellow pin here.
+  Task t = planner.choose(60);
+  CHECK(t.type == T_SCORE_HELD && t.target == MIDFIELD_GOAL,
+        "60 s left: expected Midfield Goal, got %s target %d", task_name(t.type), t.target);
+  t = planner.choose(20);
+  CHECK(t.type == T_SCORE_HELD && t.target == MIDFIELD_GOAL,
+        "20 s left: expected Midfield Goal, got %s target %d", task_name(t.type), t.target);
+
+  // 12 s left: the placement would land in Endgame, so never the Midfield Goal.
+  t = planner.choose(12);
+  CHECK(!(t.type == T_SCORE_HELD && t.target == MIDFIELD_GOAL),
+        "12 s left: planned an SG12 violation (%s target %d)", task_name(t.type), t.target);
+  CHECK(t.type == T_SCORE_HELD, "12 s left: should still score elsewhere, got %s", task_name(t.type));
+
+  mech::release_all();
+  g_gps_q = 100;
+}
+
 static void test_deadline() {
   using namespace ai;
   set_deadline(g_now_ms);
@@ -329,6 +360,7 @@ int main() {
   test_pose_seed_and_fusion();
   test_reanchoring();
   test_planner();
+  test_sg12_endgame();
   test_deadline();
   printf("%d passed, %d failed\n", passes, fails);
   return fails ? 1 : 0;

@@ -8,8 +8,7 @@
 		"language": "cpp",
 		"sdkVersion": "V5_20240802_15_00_00",
 		"cpp": {
-			"includePath": [],
-			"printf_float": true
+			"includePath": []
 		}
 	},
 	"extension": {

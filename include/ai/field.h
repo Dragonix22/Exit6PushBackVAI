@@ -140,15 +140,20 @@ inline ObjClass match_load_pin(Alliance us) {
 }
 
 /*-------------------------------- Scoring ----------------------------------*/
-// TODO verify every value against the Section 2 scoring table.
+// Checked against the manual v2.1 scoring table (Section 2) and VAISC1.
 const int PTS_ALLIANCE_HALF   = 5;   // each visible red/blue half of a Placed Pin
 const int PTS_OWNED_YELLOW    = 10;  // each visible yellow half, to the owner
 const int PTS_MIDFIELD_ROBOT  = 8;   // each robot ending in the Midfield
 const int PTS_ISOLATION_BONUS = 12;
+// Midfield Goal yellows go to the alliance with MORE robots in the Midfield at
+// the end; on a tie nobody owns them (SC5).
 
 /*------------------------------ Match timing -------------------------------*/
 const float ISOLATION_S   = 15.0f;
 const float INTERACTION_S = 105.0f;
+// Endgame = the last 10 s of the match. SG12 (applies to VEX AI as written,
+// VAIG4): no Placing Scoring Objects on the Midfield Goal during Endgame.
+const float ENDGAME_S     = 10.0f;
 
 }  // namespace field
 }  // namespace ai

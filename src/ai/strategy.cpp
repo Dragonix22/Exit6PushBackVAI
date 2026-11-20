@@ -24,7 +24,7 @@ const char *task_name(int t) {
 Planner::Planner()
     : drive_speed_ips(30.0f), pickup_s(1.2f), place_s(1.5f), load_wait_s(2.5f),
       toggle_s(1.5f), park_buffer_s(2.0f), p_win_unknown_toggle(0.55f),
-      p_keep_our_toggle(0.8f), p_win_midfield(0.6f) {
+      p_keep_our_toggle(0.8f), p_win_midfield(0.6f), sg12_margin_s(1.5f) {
 #if ROBOT_ID == ROBOT_BIG
   role.picks_field_objects = true;
   role.uses_loaders = true;
@@ -68,11 +68,16 @@ float Planner::placement_margin(int cls, int g) const {
   return m;
 }
 
-int Planner::best_goal_for(int cls, float &margin) const {
+bool Planner::midfield_goal_open(float time_left_at_place_s) const {
+  return time_left_at_place_s > ENDGAME_S + sg12_margin_s;
+}
+
+int Planner::best_goal_for(int cls, float &margin, bool allow_midfield_goal) const {
   int best = -1;
   margin = -1e9f;
   for (int g = 0; g < NUM_GOALS; g++) {
     if (!goal_usable_by(g, world.us)) continue;
+    if (g == MIDFIELD_GOAL && !allow_midfield_goal) continue;
     float m = placement_margin(cls, g);
     if (m > margin) {
       margin = m;
@@ -158,6 +163,7 @@ Task Planner::choose(float time_left_s) {
       c.y = GOALS[g].y;
       c.value = placement_margin(cls, g);
       c.time_s = travel_s(c.x, c.y) + place_s;
+      if (g == MIDFIELD_GOAL && !midfield_goal_open(time_left_s - c.time_s)) continue;  // SG12
       consider(c);
     }
     return best;
@@ -170,6 +176,14 @@ Task Planner::choose(float time_left_s) {
       if (!t.active || t.on_goal || t.conf < 0.4f || world.partner_claimed(t)) continue;
       float gm;
       int g = best_goal_for(t.cls, gm);
+      float to_obj = travel_s(t.x, t.y) + pickup_s;
+      float total = to_obj + hypotf(GOALS[g < 0 ? 0 : g].x - t.x, GOALS[g < 0 ? 0 : g].y - t.y) /
+                                 drive_speed_ips + place_s;
+      if (g == MIDFIELD_GOAL && !midfield_goal_open(time_left_s - total)) {
+        g = best_goal_for(t.cls, gm, false);  // SG12: we'd get there in Endgame
+        if (g >= 0)
+          total = to_obj + hypotf(GOALS[g].x - t.x, GOALS[g].y - t.y) / drive_speed_ips + place_s;
+      }
       if (g < 0 || gm <= 0.0f) continue;
       Task c;
       memset(&c, 0, sizeof(c));
@@ -178,8 +192,7 @@ Task Planner::choose(float time_left_s) {
       c.x = t.x;
       c.y = t.y;
       c.value = gm * t.conf;
-      c.time_s = travel_s(t.x, t.y) + pickup_s +
-                 hypotf(GOALS[g].x - t.x, GOALS[g].y - t.y) / drive_speed_ips + place_s;
+      c.time_s = total;
       consider(c);
     }
   }
@@ -187,19 +200,27 @@ Task Planner::choose(float time_left_s) {
   // Match loads (Interaction Period only; humans drop them into our loaders).
   if (role.uses_loaders && period() == INTERACTION &&
       world.loads_taken_total < MATCH_LOAD_PINS + MATCH_LOAD_CUPS) {
-    float gm;
-    int g = best_goal_for(match_load_pin(world.us), gm);
-    for (int l = 0; l < NUM_LOADERS && g >= 0; l++) {
+    for (int l = 0; l < NUM_LOADERS; l++) {
       if (LOADERS[l].color != world.us) continue;
+      float lx = LOADERS[l].x, ly = LOADERS[l].y;
+      float gm;
+      int g = best_goal_for(match_load_pin(world.us), gm);
+      if (g < 0) continue;
+      float to_load = travel_s(lx, ly) + load_wait_s;
+      float total = to_load + hypotf(GOALS[g].x - lx, GOALS[g].y - ly) / drive_speed_ips + place_s;
+      if (g == MIDFIELD_GOAL && !midfield_goal_open(time_left_s - total)) {
+        g = best_goal_for(match_load_pin(world.us), gm, false);  // SG12
+        if (g < 0) continue;
+        total = to_load + hypotf(GOALS[g].x - lx, GOALS[g].y - ly) / drive_speed_ips + place_s;
+      }
       Task c;
       memset(&c, 0, sizeof(c));
       c.type = T_LOAD;
       c.target = l;
-      c.x = LOADERS[l].x;
-      c.y = LOADERS[l].y;
+      c.x = lx;
+      c.y = ly;
       c.value = gm * 0.9f;  // we can't control what the human loads
-      c.time_s = travel_s(c.x, c.y) + load_wait_s +
-                 hypotf(GOALS[g].x - c.x, GOALS[g].y - c.y) / drive_speed_ips + place_s;
+      c.time_s = total;
       consider(c);
     }
   }

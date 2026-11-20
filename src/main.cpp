@@ -49,7 +49,8 @@ motor_group(leftFrontMotor, leftBackTopMotor, leftBackBottomMotor),
 motor_group(rightFrontMotor, rightBackTopMotor, rightBackBottomMotor),
 
 //Specify the PORT NUMBER of your inertial sensor, in PORT format (i.e. "PORT1", not simply "1"):
-PORT1,
+//(Exit6: set it in include/robot-config.h so it can't clash with the GPS/radio ports)
+INERTIAL_PORT,
 
 //Input your wheel diameter. (4" omnis are actually closer to 4.125"):
 3.25,

@@ -42,6 +42,11 @@ gps GPS = gps(GPS_PORT, 0.0, 0.0, mm, 0.0);
 gps GPS = gps(GPS_PORT, 0.0, 0.0, mm, 0.0);
 #endif
 
+// Catch two devices on the same Smart Port at compile time.
+static_assert(INERTIAL_PORT != GPS_PORT, "Inertial and GPS are on the same port");
+static_assert(INERTIAL_PORT != LINK_RADIO_PORT, "Inertial and VEXlink radio are on the same port");
+static_assert(GPS_PORT != LINK_RADIO_PORT, "GPS and VEXlink radio are on the same port");
+
 void vexcodeInit( void ) {
   // nothing to initialize
 }

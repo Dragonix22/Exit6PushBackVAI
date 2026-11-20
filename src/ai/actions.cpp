@@ -94,6 +94,14 @@ static TaskResult do_score_held(const Task &t) {
   const Goal &g = GOALS[t.target];
   MoveResult r = approach(g.x, g.y, GOAL_STANDOFF_IN);
   if (r != MOVE_DONE) return from_move(r);
+  // SG12: re-check the clock right before placing; the drive may have taken
+  // longer than planned. Failing here makes the planner pick another goal.
+  if (t.target == MIDFIELD_GOAL && period() == INTERACTION &&
+      !planner.midfield_goal_open(period_time_left_s())) {
+    log::event("SG12: Midfield Goal closed (%.1f s left), not placing", period_time_left_s());
+    drive(-8.0f, 6.0f, 1000);
+    return TASK_FAILED;
+  }
   int cls = mech::held_class();
   if (!mech::place()) return TASK_FAILED;
   world.note_scored(t.target, cls);

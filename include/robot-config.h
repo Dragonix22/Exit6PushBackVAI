@@ -25,10 +25,12 @@ extern motor rightBackBottomMotor;
 /*  - VEXlink needs a SECOND V5 radio on its own Smart Port.                 */
 /*---------------------------------------------------------------------------*/
 
-// TODO: set real ports. Must not clash with the drive (8,9,10,18,19,20) or
-// the inertial sensor (1). These differ per robot if the wiring differs.
-#define INERTIAL_PORT    PORT1
-#define GPS_PORT         PORT11
+// Every Smart Port can only be used once. The drive uses 8, 9, 10, 18, 19, 20.
+// INERTIAL_PORT is passed to the JAR chassis in main.cpp, so change it here.
+// TODO: GPS and the VEXlink radio are placeholders; set them to the ports you
+// actually wire. They can differ per robot.
+#define INERTIAL_PORT    PORT11
+#define GPS_PORT         PORT13
 #define LINK_RADIO_PORT  PORT12
 
 extern gps GPS;

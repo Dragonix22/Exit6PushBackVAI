@@ -49,6 +49,14 @@ Changes inside JAR are small and marked "Added for VEX AI": a `motion_abort`
 check in every motion loop, `set_coordinates()` no longer starts a second odom
 task, and `correct_position()` for GPS fusion.
 
+## Rules the code enforces
+
+- **SG12:** no Placing on the Midfield Goal in Endgame (last 10 s). The planner
+  won't pick it if the placement would land within `ENDGAME_S + sg12_margin_s`
+  (11.5 s) of the end, and `do_score_held` re-checks the clock before placing.
+- **SG9:** never interacts with the opposing alliance's goal (`goal_usable_by`).
+- **Toggles:** robots always back off after flipping (a touched toggle doesn't count).
+
 ## Conventions
 
 - **Frame:** field-centered inches, +Y and heading 0 along the GPS field
@@ -85,7 +93,7 @@ stops it).
 ## Setup checklist
 
 - [ ] `robot-id.h`: put your team number in `TEAM_LINK_NAME`; set `ROBOT_ID` per robot.
-- [ ] Second V5 radio on `LINK_RADIO_PORT` (VEXlink), GPS on `GPS_PORT`, both robots.
+- [ ] Ports in `include/robot-config.h`: `INERTIAL_PORT` (also used by the chassis), `GPS_PORT`, `LINK_RADIO_PORT` (second V5 radio for VEXlink). A clash between these three fails the build.
 - [ ] GPS plugged into the Brain **and** the Jetson (USB-C).
 - [ ] Measure GPS offsets; enter them in `robot-config.cpp` **and** the Jetson web dashboard.
 - [ ] Camera offset in the Jetson dashboard; `world.cam_fwd_in` / `cam_right_in` to match.
@@ -109,7 +117,7 @@ stops it).
 - **Goal contents.** Counted from scoring events, not seen. Stacked detections
   (`Track::on_goal`) could be used to check them.
 - **Starting object layout.** Fill a table from Appendix A to seed the world model.
-- **Values marked `TODO verify`** in `field.h`: Midfield size, blue loaders, point values.
+- **Values marked `TODO verify`** in `field.h`: Midfield size, blue loaders, positions. (Point values are checked against manual v2.1.)
 - **Planner timings** (`drive_speed_ips`, `pickup_s`, ...) are guesses until timed on the robot.
 
 ## Adding data from the Jetson
